@@ -7,17 +7,17 @@
 /*  VNH2SP30 pin definitions
  xxx[0] controls '1' outputs
  xxx[1] controls '2' outputs */
-int inApin[2] = {7, 4};  // INA: Clockwise input
-int inBpin[2] = {8, 9}; // INB: Counter-clockwise input
-int pwmpin[2] = {5, 6}; // PWM input
-int cspin[2] = {2, 3}; // CS: Current sense ANALOG input
-int enpin[2] = {0, 1}; // EN: Status of switches output (Analog pin)
-int interval = 2500; //interval at which to check surroundings
+const int inApin[2] = {7, 4};  // INA: Clockwise input
+const int inBpin[2] = {8, 9}; // INB: Counter-clockwise input
+const int pwmpin[2] = {5, 6}; // PWM input
+const int cspin[2] = {2, 3}; // CS: Current sense ANALOG input
+const int enpin[2] = {0, 1}; // EN: Status of switches output (Analog pin)
+const int interval = 2500; //interval at which to check surroundings
 
-int statpin = 13;
+const int statpin = 13;
 
 //sets obstance distance to avoid at 2 ft
-int obstacleDistance = 24;
+const int obstacleDistance = 24;
 
 void setup()
 {
@@ -98,6 +98,18 @@ void motorStart(){
 ////////////////turn to avoid obstacle////////////////
 void turn() {
   //change heading ex currentheading - 30
+
+  // determine direction of heading that is closer to beacon
+
+  // reverse 2 feet
+
+  // turn towards beacon 70 deg
+
+  //check for obstacles, if found turn 70 deg in other direction and recheck
+
+  //drive forward for ~6 feet in while loop whilst checking for obstacles (A great oppertunity for recursiuon!)
+
+  //
   delay(1000);
   // find beacon heading
   break;
