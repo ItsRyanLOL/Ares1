@@ -9,36 +9,47 @@
   xxx[1] controls '2' outputs */
 
 /************ Pin Definitions ********************/
+// H-Bridge Pins
 const int inApin[2] = {7, 4};  // INA: Clockwise input
 const int inBpin[2] = {8, 9}; // INB: Counter-clockwise input
 const int pwmpin[2] = {5, 6}; // PWM input
 const int cspin[2] = {2, 3}; // CS: Current sense ANALOG input
 const int enpin[2] = {0, 1}; // EN: Status of switches output (Analog pin)
 
+// Compass pins
 
-const int statpin = 13;
+// Sensor Pins
+const int sonicSensor = A0; //Ultrasonic sensor pin
 
-/******* Avoidance Varriables ************/
+//Debugging Pins
+const int statpin = 13; // Pin to enable motors (High = motors Off)
 
+
+
+/******* Navigation Varriables ************/
 const int interval = 500; //interval at which to check surroundings (milliseconds)
-int dectectedDistance = 0;
+const int headingThreashold = 10; //Threashold before robot executes heading correction (Degrees)
+
+int currentHeading; //current direction of robot
+int desiredHeading; //desired direction of robot
+int distanceToObstacle; //Distance to obstacle
 
 /******* Timer Varriables ********/
 unsigned long currentTime; //used for storing P-on time for sketch
 unsigned long lastCheckTime = 0; // Last time sensors were checked for obstacles, starts at 0
 
-//sets obstance distance to avoid in inches
-const int obstacleDistance = 24;
+const int obstacleDistance = 2.54 * 24; //sets obstance distance to avoid in inches
 
 /********* Debugging **********/
-bool verboseDebug = false; //have a verbose debug option
+bool verboseDebug = false; //have a verbose serial debug option
 bool enableDrive = true;  // be able to turn off motors for sensor debug
 
 void setup()
 {
   Serial.begin(9600);
 
-  void initalizeMotoShieldPins(); // setup H-bridge pins
+  initalizeMotoShieldPins(); // setup H-bridge pins
+  pinMode(sonicSensor, INPUT); // Initalize sonic sensor pin
   currentTime = millis(); //Start keeping track of time
 
 
@@ -46,12 +57,23 @@ void setup()
 
 
 void loop() {
-  currentTime = millis(); //update P-on time, should be first function of every loop
+  currentTime = millis(); //update P-on time, should be first action of every loop
+  currentHeading = getCurrentHeading(); // update our current heading
+  updateDesiredHeading(); //update our desired heading
 
 
-  //Check for obstacles if time since last chgeck > interval
-  if (currentTime >= lastCheckTime) {
-    lastCheckTime = millis() + interval;
+  if (currentTime >= (lastCheckTime + interval)) {   //Check for obstacles if time since last check > interval
+    lastCheckTime = currentTime; //update last check time
+
+    if (obstacleCheck()) { //Check for obstacles
+
+      if (verboseDebug) {
+        Serial.print("Object detected at ");
+        Serial.println(distanceToObstacle);
+      }
+      obstacleTurn(); //Begin evasive actions
+    }
+
   }
 
 
@@ -108,7 +130,9 @@ void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
 }
 
 //////////////////starts motors while checking for obstacles////////////////
-void motorStart() {
+
+/*
+  void motorStart() {
   //starts motor
   if (obstacleCheck(distance) >= obstacleDistance) {
     motorGo(0, CW, 1023);
@@ -121,11 +145,14 @@ void motorStart() {
     void turn();
   }
 
-}
+  }
+*/
 
 /*********** Check for shit in our way, return true if found ********************/
 bool  obstacleCheck() {
-
+  int sensorRead = analogRead(sonicSensor); //sets local var to ADC value
+  
+  return false; // PLACEHOLDER - TO BE REMOVED
 
 }
 
@@ -147,13 +174,25 @@ void obstacleTurn() {
   //
   delay(1000);
   // find beacon heading
-  break;
-
+  // break; Only used in loops or switch
 }
 
 //********* turn towards beacon when called **********
 void beaconTurn(int heading) { //heading is diseried direction
 
 }
+
+/********* Returns Robot's current Heading *********/
+int getCurrentHeading() {
+  int heading = 0; // PLACEHOLDER
+
+  //TODO: set heading to compass heading read
+
+  return heading;
+
+}
+/********* Gets desired robot heading **********/
+void updateDesiredHeading() {
+
 }
 
