@@ -4,6 +4,27 @@
 #define BRAKEGND 3
 #define CS_THRESHOLD 100
 
+/******* For 9DOF Stick **********/
+#include <SparkFunLSM9DS1.h>
+// SDO_XM and SDO_G are both pulled high, so our addresses are:
+#define LSM9DS1_M  0x1E // Would be 0x1C if SDO_M is LOW
+#define LSM9DS1_AG  0x6B // Would be 0x6A if SDO_AG is LOW
+LSM9DS1 compass;  // Storing the features in the HMC5883 library
+/*********************************/
+
+/******* For Xbee*****************/
+//#include <XBee.h>
+#include <SoftwareSerial.h>
+#include <Wire.h> // I2C Libary
+/*********************************/
+
+/******* For LCD Display *********/
+#include <Adafruit_GFX.h>
+#include "Adafruit_LEDBackpack.h"
+Adafruit_7segment matrix = Adafruit_7segment();
+int analogValue;
+/*********************************/
+
 /*  VNH2SP30 pin definitions
   xxx[0] controls '1' outputs
   xxx[1] controls '2' outputs */
@@ -13,13 +34,13 @@
 const int inApin[2] = {7, 4};  // INA: Clockwise input
 const int inBpin[2] = {8, 9}; // INB: Counter-clockwise input
 const int pwmpin[2] = {5, 6}; // PWM input
-const int cspin[2] = {2, 3}; // CS: Current sense ANALOG input
-const int enpin[2] = {0, 1}; // EN: Status of switches output (Analog pin)
+const int cspin[2] = {A2, A3}; // CS: Current sense ANALOG input
+const int enpin[2] = {A0, A1}; // EN: Status of switches output (Analog pin)
 
 // Compass pins
 
 // Sensor Pins
-const int sonicSensor = A0; //Ultrasonic sensor pin
+const int sonicSensor = A15; //Ultrasonic sensor pin
 
 //Debugging Pins
 const int statpin = 13; // Pin to enable motors (High = motors Off)
@@ -38,15 +59,18 @@ int distanceToObstacle; //Distance to obstacle
 unsigned long currentTime; //used for storing P-on time for sketch
 unsigned long lastCheckTime = 0; // Last time sensors were checked for obstacles, starts at 0
 
-const int obstacleDistance = 2.54 * 24; //sets obstance distance to avoid in inches
+const int minObstacleDistance = 2.54 * 24; //sets obstance distance to avoid in inches
 
 /********* Debugging **********/
-bool verboseDebug = false; //have a verbose serial debug option
-bool enableDrive = true;  // be able to turn off motors for sensor debug
+bool verboseDebug = true; //have a verbose serial debug option
+bool enableDrive = false;  // be able to turn off motors for sensor debug
 
 void setup()
 {
   Serial.begin(9600);
+
+  matrix.begin(0x70); //Start LCD Display
+  compass.begin(); //Start the 9DOF stick
 
   initalizeMotoShieldPins(); // setup H-bridge pins
   pinMode(sonicSensor, INPUT); // Initalize sonic sensor pin
@@ -58,10 +82,22 @@ void setup()
 
 void loop() {
   currentTime = millis(); //update P-on time, should be first action of every loop
-  currentHeading = getCurrentHeading(); // update our current heading
+  currentHeading = getHeading(); // update our current heading
   updateDesiredHeading(); //update our desired heading
 
-
+  /******** LCD Debug Code ***********/
+  analogValue = analogRead(sonicSensor);
+  if (int(analogValue) < minObstacleDistance) {
+    //Print Measurement to detected object in inches on LCD
+    matrix.print(int(analogValue / 2.54));
+    matrix.writeDisplay();
+  }
+  else {
+    //Print compass heading on LCD if no obstacle detected
+    matrix.print(int(currentHeading));
+    matrix.writeDisplay();
+  }
+  /********************************/
   if (currentTime >= (lastCheckTime + interval)) {   //Check for obstacles if time since last check > interval
     lastCheckTime = currentTime; //update last check time
 
@@ -97,10 +133,14 @@ void initalizeMotoShieldPins() {
     pinMode(pwmpin[i], OUTPUT);
   }
   // Initialize braked
-  for (int i = 0; i < 2; i++)
-  {
-    digitalWrite(inApin[i], LOW);
-    digitalWrite(inBpin[i], LOW);
+  if (enableDrive) {
+
+
+    for (int i = 0; i < 2; i++)
+    {
+      digitalWrite(inApin[i], LOW);
+      digitalWrite(inBpin[i], LOW);
+    }
   }
 }
 
@@ -151,7 +191,7 @@ void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
 /*********** Check for shit in our way, return true if found ********************/
 bool  obstacleCheck() {
   int sensorRead = analogRead(sonicSensor); //sets local var to ADC value
-  
+
   return false; // PLACEHOLDER - TO BE REMOVED
 
 }
@@ -183,16 +223,76 @@ void beaconTurn(int heading) { //heading is diseried direction
 }
 
 /********* Returns Robot's current Heading *********/
-int getCurrentHeading() {
-  int heading = 0; // PLACEHOLDER
+float getHeading(){
+  
+  float x,y;
+  
+  // Once you have your heading, you must then add your 'Declination Angle', 
+  // which is the 'Error' of the magnetic field in your location.
+  // Find yours here: http://www.magnetic-declination.com/ Mine is:
+  // +8° 29' West, which is 8.483 Degrees, or (which we need) 0.14805628 radians, I will use 8.483 
+  // degrees since we convert it to Radians later in the code.
+  // If you cannot find your Declination, comment out these two lines, your compass will be slightly off
+  float declinationAngle = 8.483; //Declination
+  // Calibration parameters for accuracy
 
-  //TODO: set heading to compass heading read
+  float Xoffset = 0.34;
+  float Yoffset = -0.08;
+  float Xscale = 1.04;
+  float Yscale = 0.96;
+  // Get Magnetic field readings
+  compass.readMag();
+  
+  // Subtract calculated offsets from magnetometer data
+  x = compass.calcMag(compass.mx)-Xoffset;
+  y = compass.calcMag(compass.my)-Yoffset;
 
+  // Scaling correction
+  x *= Xscale;
+  y *= Yscale;
+  
+  // Begin to calculate heading
+  float heading;
+
+  // Calculate the angle
+  if (y == 0)
+    heading = (x < 0) ? PI : 0;
+  else
+    heading = atan2(y,x);
+
+  // Correct for Declination
+    heading -= declinationAngle * (PI/180);
+
+  // Correct for sign errors
+  if (heading > 2*PI) heading -= (2 * PI);
+  else if (heading < -PI) heading += (2 * PI);
+  else if (heading < 0) heading += (2 * PI);
+  
+  // Convert everything from radians to degrees:
+  heading *= (180.0 / PI);
+
+  //Return the heading
   return heading;
-
+  if (verboseDebug) Serial.print("Heading: "); Serial.println(heading, 2);
 }
+
 /********* Gets desired robot heading **********/
 void updateDesiredHeading() {
 
+}
+void compassSetup() {
+
+  compass.settings.device.commInterface = IMU_MODE_I2C;
+  compass.settings.device.mAddress = LSM9DS1_M;
+  compass.settings.device.agAddress = LSM9DS1_AG;
+  // The above lines will only take effect AFTER calling
+  // compass.begin(), which verifies communication with the compass
+  // and turns it on.
+  if (!compass.begin())
+  {
+    Serial.println("Failed to communicate with LSM9DS1.");
+    while (1)
+      ;
+  }
 }
 
