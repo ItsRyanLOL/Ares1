@@ -21,14 +21,14 @@ void setup() {
 
   //Initialize i2c communications
   Wire.begin(8);                // join i2c bus with address #8
-  //Wire.onRequest(i2cPrint); // register event
+  Wire.onRequest(i2cPrint); // register event
 }
 
-void loop{  
+void loop() {  
   //Process the data and reset.
-  bHeading  = (ProcessData());
+  beaconHeading  = (ProcessData());
   beacHeadingI2c[0] = 0xFF&(bHeading >>8);
-  beacHeadingI2c[1] = 0xFF&bHeading ;
+  beacHeadingI2c[1] = 0xFF&bHeading;
   Serial.println(bHeading );
   outputSerial.println(bHeading );
 }
@@ -97,4 +97,12 @@ int ProcessData(){
   bHeading  = bHeading  * 180 / PI;
 
   return (int) heading;
+}
+void i2cPrint() {
+//Sends heading over I2C bus
+Wire.write(beacHeadingI2c, 2);
+
+//Give some serial shit for debug
+Serial.print("Sent data to my master: ");
+Serial.println(beacHeadingI2c[0]+beacHeadingI2c[1]);
 }
