@@ -55,7 +55,7 @@ void setup() {
 
   //Initialize i2c communications
   Wire.begin(8);                // join i2c bus with address #8
-  Wire.onRequest(i2cPrint); // register event 
+  Wire.onRequest(i2cPrint); // register event
 }
 
 void loop() {
@@ -70,18 +70,8 @@ void loop() {
   
   //Process the data, print the result, and reset.
   currentHeading = (ProcessData());
-  if(currentHeading <= 180 && currentHeading >= 0) {
-  currHeadingI2c[0] = 0;
-  currHeadingI2c[1] = currentHeading;
-  }
-  else if (currentHeading > 180 && currentHeading < 360) {
-    currHeadingI2c[0] = 1;
-    currHeadingI2c[1] = currentHeading-180;
-  }
-  else {
-    currHeadingI2c[0] = 2; // Error case
-  }
-
+  currHeadingI2c[0] = 0xFF&(currentHeading>>8);
+  currHeadingI2c[1] = 0xFF&currentHeading;
   Serial.println(currentHeading);
   outputSerial.println(currentHeading);
 }
@@ -168,7 +158,5 @@ int ProcessData(){
 void i2cPrint()
 {
   Wire.write(currHeadingI2c, 2);
-  for(int a = 0; a <= sizeof(currHeadingI2c[2]); a++) {
-    Serial.println(currHeadingI2c[a]);
-  }
+  // as expected by master
 }

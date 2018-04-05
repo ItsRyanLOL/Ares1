@@ -88,12 +88,13 @@ void loop() {
   analogValue = analogRead(sonicSensor);
   if (int(analogValue) < minObstacleDistance) {
     //Print Measurement to detected object in inches on LCD
-    matrix.print(int(analogValue / 2.54));
+    if(desiredHeading != -1) matrix.print(int(analogValue / 2.54));
+    else matrix.print(char("E"));
     matrix.writeDisplay();
   }
   else {
-    //Print compass heading on LCD if no obstacle detected
-    matrix.print(int(currentHeading));
+    //Print desired heading on LCD if no obstacle detected
+    matrix.print(int(desiredHeading));
     matrix.writeDisplay();
   }
   /********************************/
@@ -272,14 +273,14 @@ float getHeading(){
 
   //Return the heading
   return heading;
-  if (verboseDebug) Serial.print("Heading: "); Serial.println(heading, 2);
+  if (verboseDebug) Serial.print(F("Heading: ")); Serial.println(heading, 2);
 }
 
 /********* Gets desired robot heading **********/
 void updateDesiredHeading() {
   int receivedData[2];
   if(verboseDebug) {
-    Serial.println("heading update Requested");
+    Serial.println(F("heading update Requested"));
     delay(1000);
   }
   Wire.requestFrom(xbeeWireAddress, 2); // Request 8 bits of data from xbeeWireAddress
@@ -292,14 +293,21 @@ void updateDesiredHeading() {
 
     a++; //increment a by 1
   }
-  if(receivedData[0] == 0) {
-    desiredHeading = 180 + receivedData[1]; // Update desiredHeading to direction we want to drive
+  if (receivedData[0] == 2) {
+    desiredHeading == -1;
+    if (verboseDebug) {
+      Serial.println(F("Error Parsing beacon data."));
+    }
+    return;
   }
-  else if (receivedData[0] == 1) desiredHeading = receivedData[1];
+  else if (receivedData[0] == 0) {
+    desiredHeading = receivedData[1]; // Update desiredHeading to direction we want to drive
+  }
+  else if (receivedData[0] == 1) desiredHeading = 180 + receivedData[1]; //Add 180 because of checksum
   
   if(desiredHeading == 360) desiredHeading = 0;
   if(verboseDebug) {
-    Serial.print("Desired direction to drive: ");
+    Serial.print(F("Desired direction to drive: "));
     Serial.println(desiredHeading);
   }
 }
@@ -313,7 +321,7 @@ void compassSetup() {
   // and turns it on.
   if (!compass.begin())
   {
-    Serial.println("Failed to communicate with LSM9DS1.");
+    Serial.println(F("Failed to communicate with LSM9DS1."));
     while (1)
       ;
   }
