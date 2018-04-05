@@ -170,7 +170,7 @@ void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
 
 //////////////////starts motors while checking for obstacles////////////////
 
-/*
+
   void motorStart() {
   //starts motor
   if (obstacleCheck(distance) >= obstacleDistance) {
@@ -181,11 +181,11 @@ void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
     motorGo(0, CW, 0);
     motorGo(1, CW, 0);
 
-    void turn();
+    void obstacleTurn();
   }
 
   }
-*/
+
 
 /*********** Check for shit in our way, return true if found ********************/
 bool  obstacleCheck() {
@@ -218,7 +218,22 @@ void obstacleTurn() {
 
 //********* turn towards beacon when called **********
 void beaconTurn(int heading) { //heading is diseried direction
-
+  while(desiredHeading > 180){
+    for(currentHeading; currentHeading < desiredHeading; currentHeading += 5){
+      (CCW, 0, 1023);
+      (CW, 1, 1023);
+    }
+    (CCW, 0, 0);
+    (CW, 1, 0);
+  }
+  while(desiredHeading <= -180){
+    for(currentHeading; currentHeading < desiredHeading; currentHeading -= 5){
+      (CW, 0, 1023);
+      (CCW, 1, 1023);
+    }
+    (CW, 0, 0);
+    (CCW, 1, 0);
+  }
 }
 
 /********* Returns Robot's current Heading *********/
