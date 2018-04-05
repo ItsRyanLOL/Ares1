@@ -51,7 +51,7 @@ const int interval = 500; //interval at which to check surroundings (millisecond
 const int headingThreashold = 10; //Threashold before robot executes heading correction (Degrees)
 
 int currentHeading; //current direction of robot
-int desiredHeading; //desired direction of robot
+int desiredHeading = -1; //desired direction of robot
 int distanceToObstacle; //Distance to obstacle
 
 /******* Timer Varriables ********/
@@ -84,6 +84,10 @@ void loop() {
   currentHeading = getHeading(); // update our current heading
   updateDesiredHeading(); //update our desired heading
 
+  if(desiredHeading == -1) {
+    Serial.println("Can not find direction to drive");
+    return;
+  }
   /******** LCD Debug Code ***********/
   analogValue = analogRead(sonicSensor);
   if (int(analogValue) < minObstacleDistance) {
@@ -279,7 +283,6 @@ float getHeading(){
 void updateDesiredHeading() {
   int receivedData[2];
   if(verboseDebug) {
-    Serial.println("heading update Requested");
     delay(1000);
   }
   Wire.requestFrom(xbeeWireAddress, 2); // Request 8 bits of data from xbeeWireAddress
@@ -292,12 +295,16 @@ void updateDesiredHeading() {
 
     a++; //increment a by 1
   }
-  if(receivedData[0] == 0) {
+  if (receivedData[0] == 2) desiredHeading = -1; // Errors have happened! set desiredHeading to -1 to indicate such and maybe sack an engineer or two
+  
+  else if(receivedData[0] == 0) {
     desiredHeading = 180 + receivedData[1]; // Update desiredHeading to direction we want to drive
   }
+  
   else if (receivedData[0] == 1) desiredHeading = receivedData[1];
   
   if(desiredHeading == 360) desiredHeading = 0;
+  
   if(verboseDebug) {
     Serial.print("Desired direction to drive: ");
     Serial.println(desiredHeading);

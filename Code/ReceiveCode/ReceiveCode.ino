@@ -78,6 +78,9 @@ void loop() {
     currHeadingI2c[0] = 1;
     currHeadingI2c[1] = currentHeading-180;
   }
+  else {
+    currHeadingI2c[0] = 2; // Error case
+  }
 
   Serial.println(currentHeading);
   outputSerial.println(currentHeading);
