@@ -174,7 +174,7 @@ void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
 
   void motorStart() {
   //starts motor
-  if (obstacleCheck(distance) >= obstacleDistance) {
+  if (obstacleCheck() >= distanceToObstacle) {
     motorGo(0, CW, 1023);
     motorGo(1, CW, 1023);
   }
