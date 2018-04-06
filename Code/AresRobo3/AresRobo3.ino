@@ -1,7 +1,7 @@
 /******** COmpass Info ***************
-*  ----Calibration Complete----
-*  Final Offsets: X = -0.22  Y = 0.33
-*  Final Scales: X = 1.24  Y = 0.84
+   ----Calibration Complete----
+   Final Offsets: X = -0.22  Y = 0.33
+   Final Scales: X = 1.24  Y = 0.84
 */
 
 #define BRAKEVCC 0
@@ -42,8 +42,6 @@ const int pwmpin[2] = {5, 6}; // PWM input
 const int cspin[2] = {A2, A3}; // CS: Current sense ANALOG input
 const int enpin[2] = {A0, A1}; // EN: Status of switches output (Analog pin)
 
-// Compass pins
-
 // Sensor Pins
 const int sonicSensor = A15; //Ultrasonic sensor pin
 
@@ -55,6 +53,7 @@ const int statpin = 13; // Pin to enable motors (High = motors Off)
 /******* Navigation Varriables ************/
 const int interval = 500; //interval at which to check surroundings (milliseconds)
 const int headingThreashold = 10; //Threashold before robot executes heading correction (Degrees)
+const int motorStateChangeDelay = 50;
 
 int currentHeading; //current direction of robot
 int desiredHeading; //desired direction of robot
@@ -63,6 +62,7 @@ int distanceToObstacle; //Distance to obstacle
 /******* Timer Varriables ********/
 unsigned long currentTime; //used for storing P-on time for sketch
 unsigned long lastCheckTime = 0; // Last time sensors were checked for obstacles, starts at 0
+unsigned long nextNavCheck = 0; //Timer var for nav updates
 
 const int minObstacleDistance = 2.54 * 24; //sets obstance distance to avoid in inches
 
@@ -92,21 +92,21 @@ void loop() {
   currentHeading = getHeading(); // update our current heading
   updateDesiredHeading(); //update our desired heading
 
-  /******** LCD Debug Code ***********/
+  /******** Locomotive Code ***********/
   analogValue = analogRead(sonicSensor);
   if (int(analogValue) < minObstacleDistance) {
     //Print Measurement to detected object in inches on LCD
-    if(desiredHeading != -1) matrix.print(int(analogValue / 2.54));
+    if (desiredHeading != -1) matrix.print(int(analogValue / 2.54));
     else matrix.print(char("E"));
     matrix.writeDisplay();
     allStop();
-    rightTurn(currentHeading+90);
+    obstacleTurn();
   }
   else {
     //Print desired heading on LCD if no obstacle detected
     matrix.print(int(desiredHeading));
     matrix.writeDisplay();
-    rightTurn(desiredHeading);
+    if (currentTime >= nextNavCheck) rightTurn(desiredHeading);
     motorStart();
   }
   /********************************/
@@ -156,8 +156,18 @@ void initalizeMotoShieldPins() {
   }
 }
 
+/*********** Check for shit in our way, return true if found ********************/
+bool  obstacleCheck() {
+  int sensorRead = analogRead(sonicSensor); //sets local var to ADC value
+  if (sensorRead <= minObstacleDistance) return true; //return true if it sees something
+  else return false; //path is clear
 
-////////////////Function to start motors ////////////////
+}
+
+/*****************************************************
+          Motor Control Functions
+ ****************************************************/
+
 void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm) {
   if (motor <= 1)
   {
@@ -181,48 +191,58 @@ void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm) {
 }
 
 
-  void motorStart() {
-<<<<<<< HEAD
-  //starts both motors
-=======
-  //starts motor
-  if (obstacleCheck() >= distanceToObstacle) {
->>>>>>> a1017fb513d930aba9d47e193762983bce1cc188
-    motorGo(0, CW, 1023);
-    motorGo(1, CW, 1023);
-  }
-
-/*********** Check for shit in our way, return true if found ********************/
-bool  obstacleCheck() {
-  int sensorRead = analogRead(sonicSensor); //sets local var to ADC value
-  if (sensorRead <= minObstacleDistance) return true; //return true if it sees something
-  else return false; //path is clear
-
+void motorStart() {
+  //starts motor in forward direction
+  motorGo(0, CW, 1023);
+  motorGo(1, CW, 1023);
+  nextNavCheck = millis() + motorStateChangeDelay; //pause nav updates
 }
 
-/*****************************************************
- *        Motor Control Functions                    *
- ****************************************************/
-
- void rightTurn(int heading) {
+void rightTurn(int heading) {
   allStop(); //make sure all motors are off
-  motorGo(0,CW,1023);
-  motorGo(1,CCW,1023);
-  while(!(getHeading() > (heading - 10) && getHeading() < (heading + 10))) {
-  matrix.print(int(getHeading()));
-  matrix.writeDisplay();
-  delay(5);
+  motorGo(0, CCW, 1023);
+  motorGo(1, CW, 1023);
+  while (!(getHeading() > (heading - 10) && getHeading() < (heading + 10))) {
+    matrix.print(int(getHeading()));
+    matrix.writeDisplay();
+    delay(5);
   }
   allStop();
- }
+  nextNavCheck = millis() + motorStateChangeDelay; //Pause Nav updates
+}
 ////////////////turn to avoid obstacle////////////////
 void obstacleTurn() {
-  //change heading ex currentheading - 30
+  int orignalHeading = getHeading();
+  // TODO: determine direction of heading that is closer to beacon
 
-  // determine direction of heading that is closer to beacon
-
-  // reverse 2 feet
-
+  //change heading
+  rightTurn(currentHeading + 70);
+  // check for crap and drive if clear
+  if (!obstacleDetected()) {
+    currentTime = millis(); // update time
+    int forwardTime = currentTime + 500;
+    //drive forward a bit
+    while (!obstacleDetected() && currentTime < forwardTime) {
+      motorStart();
+      currentTime = millis(); //update time
+      delay(5); //slow this train wreck down a little
+    }
+    allStop(); //stop avoidance
+  }
+  else { //We turned and crap is STILL THERE!
+    rightTurn(findInverseAngle(orignalHeading)); //turn 180 degrees and check again
+    if (!obstacleDetected()) {
+      currentTime = millis(); // update time
+      int forwardTime = currentTime + 500;
+      //drive forward a bit
+      while (!obstacleDetected() && currentTime < forwardTime) {
+        motorStart();
+        currentTime = millis(); //update time
+        delay(5); //slow this train wreck down a little
+      }
+      allStop(); //stop avoidance
+    }
+  }
   // turn towards beacon 70 deg
 
   //check for obstacles, if found turn 70 deg in other direction and recheck
@@ -237,16 +257,16 @@ void obstacleTurn() {
 
 //********* turn towards beacon when called **********
 void beaconTurn(int heading) { //heading is diseried direction
-  while(desiredHeading > 180){
-    for(currentHeading; currentHeading < desiredHeading; currentHeading += 5){
+  while (desiredHeading > 180) {
+    for (currentHeading; currentHeading < desiredHeading; currentHeading += 5) {
       motorGo(CCW, 0, 1023);
       motorGo(CW, 1, 1023);
     }
     motorGo(CCW, 0, 0);
     motorGo(CW, 1, 0);
   }
-  while(desiredHeading <= -180){
-    for(currentHeading; currentHeading < desiredHeading; currentHeading -= 5){
+  while (desiredHeading <= -180) {
+    for (currentHeading; currentHeading < desiredHeading; currentHeading -= 5) {
       motorGo(CW, 0, 1023);
       motorGo(CCW, 1, 1023);
     }
@@ -254,16 +274,28 @@ void beaconTurn(int heading) { //heading is diseried direction
     motorGo(CCW, 1, 0);
   }
 }
-
+int findInverseAngle(int angle) {
+  if (angle >= 180) return (angle - 180);
+  else if (angle < 180) return (angle + 180);
+}
+int addAngle (int currentAngle, int add) {
+  int tempA = (currentAngle + add);
+  if(tempA >= 0 && tempA < 360) {
+    return tempA; 
+  }
+  else if (tempA < 0) {
+    
+  }
+}
 /********* Returns Robot's current Heading *********/
-float getHeading(){
-  
-  float x,y;
-  
-  // Once you have your heading, you must then add your 'Declination Angle', 
+float getHeading() {
+
+  float x, y;
+
+  // Once you have your heading, you must then add your 'Declination Angle',
   // which is the 'Error' of the magnetic field in your location.
   // Find yours here: http://www.magnetic-declination.com/ Mine is:
-  // +8° 29' West, which is 8.483 Degrees, or (which we need) 0.14805628 radians, I will use 8.483 
+  // +8° 29' West, which is 8.483 Degrees, or (which we need) 0.14805628 radians, I will use 8.483
   // degrees since we convert it to Radians later in the code.
   // If you cannot find your Declination, comment out these two lines, your compass will be slightly off
   float declinationAngle = 8.483; //Declination
@@ -275,15 +307,15 @@ float getHeading(){
   float Yscale = 0.84;
   // Get Magnetic field readings
   compass.readMag();
-  
+
   // Subtract calculated offsets from magnetometer data
-  x = compass.calcMag(compass.mx)-Xoffset;
-  y = compass.calcMag(compass.my)-Yoffset;
+  x = compass.calcMag(compass.mx) - Xoffset;
+  y = compass.calcMag(compass.my) - Yoffset;
 
   // Scaling correction
   x *= Xscale;
   y *= Yscale;
-  
+
   // Begin to calculate heading
   float heading;
 
@@ -291,16 +323,16 @@ float getHeading(){
   if (y == 0)
     heading = (x < 0) ? PI : 0;
   else
-    heading = atan2(y,x);
+    heading = atan2(y, x);
 
   // Correct for Declination
-    heading -= declinationAngle * (PI/180);
+  heading -= declinationAngle * (PI / 180);
 
   // Correct for sign errors
-  if (heading > 2*PI) heading -= (2 * PI);
+  if (heading > 2 * PI) heading -= (2 * PI);
   else if (heading < -PI) heading += (2 * PI);
   else if (heading < 0) heading += (2 * PI);
-  
+
   // Convert everything from radians to degrees:
   heading *= (180.0 / PI);
 
@@ -312,17 +344,17 @@ float getHeading(){
 /********* Gets desired robot heading **********/
 void updateDesiredHeading() {
   int receivedData[2];
-  if(verboseDebug) {
+  if (verboseDebug) {
     Serial.println(F("heading update Requested"));
     //delay(1000);
   }
   Wire.requestFrom(xbeeWireAddress, 2); // Request 2 bytes of data from xbeeWireAddress
 
   int a = 0; //start counting
-  while(Wire.available())    // slave may send less than requested, so let's do something about that
-  { 
+  while (Wire.available())   // slave may send less than requested, so let's do something about that
+  {
     receivedData[a] = Wire.read();    // receive a byte as an int
-    if(verboseDebug) Serial.println(receivedData[a]);         // print the int
+    if (verboseDebug) Serial.println(receivedData[a]);        // print the int
 
     a++; //increment a by 1
   }
@@ -337,9 +369,9 @@ void updateDesiredHeading() {
     desiredHeading = receivedData[1]; // Update desiredHeading to direction we want to drive
   }
   else if (receivedData[0] == 1) desiredHeading = 180 + receivedData[1]; //Add 180 because of checksum
-  
-  if(desiredHeading == 360) desiredHeading = 0;
-  if(verboseDebug) {
+
+  if (desiredHeading == 360) desiredHeading = 0;
+  if (verboseDebug) {
     Serial.print(F("Desired direction to drive: "));
     Serial.println(desiredHeading);
   }
