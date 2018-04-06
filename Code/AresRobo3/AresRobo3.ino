@@ -1,3 +1,9 @@
+/******** COmpass Info ***************
+*  ----Calibration Complete----
+*  Final Offsets: X = -0.22  Y = 0.33
+*  Final Scales: X = 1.24  Y = 0.84
+*/
+
 #define BRAKEVCC 0
 #define CW   1 //clockwise
 #define CCW  2 //counterclockwise
@@ -75,6 +81,8 @@ void setup()
   pinMode(sonicSensor, INPUT); // Initalize sonic sensor pin
   currentTime = millis(); //Start keeping track of time
 
+  delay(5000); //give some time to clear fingers
+
 
 }
 
@@ -91,11 +99,15 @@ void loop() {
     if(desiredHeading != -1) matrix.print(int(analogValue / 2.54));
     else matrix.print(char("E"));
     matrix.writeDisplay();
+    allStop();
+    rightTurn(currentHeading+90);
   }
   else {
     //Print desired heading on LCD if no obstacle detected
     matrix.print(int(desiredHeading));
     matrix.writeDisplay();
+    rightTurn(desiredHeading);
+    motorStart();
   }
   /********************************/
   if (currentTime >= (lastCheckTime + interval)) {   //Check for obstacles if time since last check > interval
@@ -146,8 +158,7 @@ void initalizeMotoShieldPins() {
 
 
 ////////////////Function to start motors ////////////////
-void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
-{
+void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm) {
   if (motor <= 1)
   {
     if (direct <= 4)
@@ -169,34 +180,36 @@ void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm)
   }
 }
 
-//////////////////starts motors while checking for obstacles////////////////
-
 
   void motorStart() {
-  //starts motor
-  if (obstacleCheck(distance) >= obstacleDistance) {
+  //starts both motors
     motorGo(0, CW, 1023);
     motorGo(1, CW, 1023);
   }
-  else {
-    motorGo(0, CW, 0);
-    motorGo(1, CW, 0);
-
-    void obstacleTurn();
-  }
-
-  }
-
 
 /*********** Check for shit in our way, return true if found ********************/
 bool  obstacleCheck() {
   int sensorRead = analogRead(sonicSensor); //sets local var to ADC value
-
-  return false; // PLACEHOLDER - TO BE REMOVED
+  if (sensorRead <= minObstacleDistance) return true; //return true if it sees something
+  else return false; //path is clear
 
 }
 
+/*****************************************************
+ *        Motor Control Functions                    *
+ ****************************************************/
 
+ void rightTurn(int heading) {
+  allStop(); //make sure all motors are off
+  motorGo(0,CW,1023);
+  motorGo(1,CCW,1023);
+  while(!(getHeading() > (heading - 10) && getHeading() < (heading + 10))) {
+  matrix.print(int(getHeading()));
+  matrix.writeDisplay();
+  delay(5);
+  }
+  allStop();
+ }
 ////////////////turn to avoid obstacle////////////////
 void obstacleTurn() {
   //change heading ex currentheading - 30
@@ -212,7 +225,7 @@ void obstacleTurn() {
   //drive forward for ~6 feet in while loop whilst checking for obstacles (A great oppertunity for recursiuon!)
 
   //
-  delay(1000);
+  //delay(1000);
   // find beacon heading
   // break; Only used in loops or switch
 }
@@ -221,19 +234,19 @@ void obstacleTurn() {
 void beaconTurn(int heading) { //heading is diseried direction
   while(desiredHeading > 180){
     for(currentHeading; currentHeading < desiredHeading; currentHeading += 5){
-      (CCW, 0, 1023);
-      (CW, 1, 1023);
+      motorGo(CCW, 0, 1023);
+      motorGo(CW, 1, 1023);
     }
-    (CCW, 0, 0);
-    (CW, 1, 0);
+    motorGo(CCW, 0, 0);
+    motorGo(CW, 1, 0);
   }
   while(desiredHeading <= -180){
     for(currentHeading; currentHeading < desiredHeading; currentHeading -= 5){
-      (CW, 0, 1023);
-      (CCW, 1, 1023);
+      motorGo(CW, 0, 1023);
+      motorGo(CCW, 1, 1023);
     }
-    (CW, 0, 0);
-    (CCW, 1, 0);
+    motorGo(CW, 0, 0);
+    motorGo(CCW, 1, 0);
   }
 }
 
@@ -251,10 +264,10 @@ float getHeading(){
   float declinationAngle = 8.483; //Declination
   // Calibration parameters for accuracy
 
-  float Xoffset = 0.34;
-  float Yoffset = -0.08;
-  float Xscale = 1.04;
-  float Yscale = 0.96;
+  float Xoffset = -0.22;
+  float Yoffset = 0.33;
+  float Xscale = 1.24;
+  float Yscale = 0.84;
   // Get Magnetic field readings
   compass.readMag();
   
@@ -296,9 +309,9 @@ void updateDesiredHeading() {
   int receivedData[2];
   if(verboseDebug) {
     Serial.println(F("heading update Requested"));
-    delay(1000);
+    //delay(1000);
   }
-  Wire.requestFrom(xbeeWireAddress, 2); // Request 8 bits of data from xbeeWireAddress
+  Wire.requestFrom(xbeeWireAddress, 2); // Request 2 bytes of data from xbeeWireAddress
 
   int a = 0; //start counting
   while(Wire.available())    // slave may send less than requested, so let's do something about that
@@ -340,5 +353,9 @@ void compassSetup() {
     while (1)
       ;
   }
+}
+void allStop() {
+  motorGo(0, BRAKEGND, 1023);
+  motorGo(1, BRAKEGND, 1023);
 }
 
