@@ -96,15 +96,15 @@ void loop() {
   analogValue = analogRead(sonicSensor);
   if (int(analogValue) < minObstacleDistance) {
     //Print Measurement to detected object in inches on LCD
-    if (desiredHeading != -1) matrix.print(int(analogValue / 2.54));
-    else matrix.print(char("E"));
+     matrix.print(int(analogValue / 2.54));
     matrix.writeDisplay();
     allStop();
     obstacleTurn();
   }
   else {
     //Print desired heading on LCD if no obstacle detected
-    matrix.print(int(desiredHeading));
+    if (desiredHeading != -1) matrix.print(int(desiredHeading));
+    else matrix.print('E');
     matrix.writeDisplay();
     if (currentTime >= nextNavCheck) rightTurn(desiredHeading);
     motorStart();
@@ -195,7 +195,7 @@ void motorStart() {
   //starts motor in forward direction
   motorGo(0, CW, 1023);
   motorGo(1, CW, 1023);
-  nextNavCheck = millis() + motorStateChangeDelay; //pause nav updates
+  nextNavCheck = millis() + motorStateChangeDelay; // Pause nav updates
 }
 
 void rightTurn(int heading) {
@@ -218,24 +218,24 @@ void obstacleTurn() {
   //change heading
   rightTurn(currentHeading + 70);
   // check for crap and drive if clear
-  if (!obstacleDetected()) {
+  if (!obstacleCheck()) {
     currentTime = millis(); // update time
     int forwardTime = currentTime + 500;
     //drive forward a bit
-    while (!obstacleDetected() && currentTime < forwardTime) {
-      motorStart();
-      currentTime = millis(); //update time
+    while (!obstacleCheck() && currentTime < forwardTime) {
+      motorStart(); // Drive foward while path is clear
       delay(5); //slow this train wreck down a little
+      currentTime = millis(); //update time
     }
-    allStop(); //stop avoidance
+    allStop(); //stop avoidance - return to loop()
   }
   else { //We turned and crap is STILL THERE!
     rightTurn(findInverseAngle(orignalHeading)); //turn 180 degrees and check again
-    if (!obstacleDetected()) {
+    if (!obstacleCheck()) {
       currentTime = millis(); // update time
       int forwardTime = currentTime + 500;
       //drive forward a bit
-      while (!obstacleDetected() && currentTime < forwardTime) {
+      while (!obstacleCheck() && currentTime < forwardTime) {
         motorStart();
         currentTime = millis(); //update time
         delay(5); //slow this train wreck down a little
@@ -284,7 +284,10 @@ int addAngle (int currentAngle, int add) {
     return tempA; 
   }
   else if (tempA < 0) {
-    
+    return (360 + tempA);
+  }
+  else if (tempA > 360) {
+    return (tempA - 360);
   }
 }
 /********* Returns Robot's current Heading *********/
