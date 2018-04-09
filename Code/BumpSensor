@@ -1,0 +1,40 @@
+ 
+//////////////////////////////will be changing////////////////////////////////////
+const int bump = 2; // bumper pin 2
+int bumpVar = 0;          // Var for bump
+
+void setup() { 
+  
+} 
+
+void loop() { 
+  // Test bumper switches
+  pbLeft = digitalRead(bump);
+
+  // If bumper hit
+  if (bumpVar == HIGH) {
+   reverse(); 
+   obstacleTurn();
+  }
+
+  // If right bumper hit
+  if (pbRight == HIGH) {
+   reverse();
+   delay(500); 
+   turnLeft();
+   delay(1500);
+  }
+}
+
+
+void reverse() {
+  servoLeft.write(180);
+  servoRight.write(0);
+}
+
+void turnLeft() {
+  servoLeft.write(0);
+  servoRight.write(0);
+}
+
+
