@@ -45,6 +45,10 @@ const int enpin[2] = {A0, A1}; // EN: Status of switches output (Analog pin)
 // Sensor Pins
 const int sonicSensor = A15; //Ultrasonic sensor pin
 
+//Bump Sensor Pin and variable
+const int bumpPin = 2; // bumper pin 2
+int bumpVar = 0;          // Var for bump
+
 //Debugging Pins
 const int statpin = 13; // Pin to enable motors (High = motors Off)
 
@@ -80,6 +84,7 @@ void setup()
   initalizeMotoShieldPins(); // setup H-bridge pins
   pinMode(sonicSensor, INPUT); // Initalize sonic sensor pin
   currentTime = millis(); //Start keeping track of time
+  
 
   delay(5000); //give some time to clear fingers
 
@@ -88,6 +93,7 @@ void setup()
 
 
 void loop() {
+  bumpVar = digitalRead(bumpPin);   //reads bumpPin into variable
   currentTime = millis(); //update P-on time, should be first action of every loop
   currentHeading = getHeading(); // update our current heading
   updateDesiredHeading(); //update our desired heading
@@ -397,5 +403,23 @@ void compassSetup() {
 void allStop() {
   motorGo(0, BRAKEGND, 1023);
   motorGo(1, BRAKEGND, 1023);
+}
+
+void bumpedObstacle() {
+  // If bumper hit
+  if (bumpVar == HIGH) {
+    allStop();  //stops motors
+    reverse();  //makes robot goes back for 2 seconds
+    obstacleTurn();
+    allStop();
+  }
+}
+
+void reverse() {
+  unsigned long bumpTime = millis();
+  while(bumpTime <= 2000){
+    motorGo(0, CCW, 1023);
+    motorGo(1, CCW, 1023);
+  }
 }
 
