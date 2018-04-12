@@ -46,7 +46,7 @@ const int enpin[2] = {A0, A1}; // EN: Status of switches output (Analog pin)
 const int sonicSensor = A15; //Ultrasonic sensor pin
 
 //Bump Sensor Pin and variable
-const int bumpPin = 2; // bumper pin 2
+const int bumpPin = A13; // bumper pin 2
 int bumpVar = 0;          // Variable for bump
 
 //Debugging Pins
@@ -84,7 +84,7 @@ void setup()
   initalizeMotoShieldPins(); // setup H-bridge pins
   pinMode(sonicSensor, INPUT); // Initalize sonic sensor pin
   currentTime = millis(); //Start keeping track of time
-  pinMode(bumpPin, input);// Initializes bump sensor
+  pinMode(bumpPin, INPUT);// Initializes bump sensor
 
   delay(5000); //give some time to clear fingers
   //clear fingers???Line 89
