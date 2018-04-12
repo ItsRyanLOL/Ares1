@@ -47,7 +47,7 @@ const int sonicSensor = A15; //Ultrasonic sensor pin
 
 //Bump Sensor Pin and variable
 const int bumpPin = 2; // bumper pin 2
-int bumpVar = 0;          // Var for bump
+int bumpVar = 0;          // Variable for bump
 
 //Debugging Pins
 const int statpin = 13; // Pin to enable motors (High = motors Off)
@@ -84,9 +84,10 @@ void setup()
   initalizeMotoShieldPins(); // setup H-bridge pins
   pinMode(sonicSensor, INPUT); // Initalize sonic sensor pin
   currentTime = millis(); //Start keeping track of time
-  
+  pinMode(bumpPin, input);// Initializes bump sensor
 
   delay(5000); //give some time to clear fingers
+  //clear fingers???Line 89
 
 
 }
