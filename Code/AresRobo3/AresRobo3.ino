@@ -46,7 +46,7 @@ const int enpin[2] = {A0, A1}; // EN: Status of switches output (Analog pin)
 const int sonicSensor = A15; //Ultrasonic sensor pin
 
 //Bump Sensor Pin and variable
-const int bumpPin = A13; // bumper pin 2
+const int bumpPin = 50; // bumper pin set to pin 50
 int bumpVar = 0;          // Variable for bump
 
 //Debugging Pins
