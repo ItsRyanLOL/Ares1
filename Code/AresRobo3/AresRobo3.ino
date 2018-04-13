@@ -5,8 +5,8 @@
 */
 
 #define BRAKEVCC 0
-#define CW   1 //clockwise
-#define CCW  2 //counterclockwise
+#define CW   2 //clockwise
+#define CCW  1 //counterclockwise
 #define BRAKEGND 3
 #define CS_THRESHOLD 100
 
