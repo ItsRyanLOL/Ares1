@@ -1,5 +1,9 @@
 // Beacon Receiver with Task Scheduling for use in main processor
 
+#include <Wire.h> // I2C Libary
+const int xbeeWireAddress = 8; //I2C adress of slave xbee
+
+
 #include "stdlib.h"
 #include "TaskScheduler.h"
 #include <XBee.h>
