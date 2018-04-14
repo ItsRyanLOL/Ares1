@@ -98,6 +98,7 @@ void loop() {
   currentTime = millis(); //update P-on time, should be first action of every loop
   currentHeading = getHeading(); // update our current heading
   updateDesiredHeading(); //update our desired heading
+  bumpedObstacle(); //tells if bumper is hit
 
   /******** Locomotive Code ***********/
   analogValue = analogRead(sonicSensor);
